@@ -65,7 +65,7 @@ class InvoiceController extends Controller
             ri.id_convenio,
             u.sigla,
             a.id_atendimento,
-            COALESCE(aae.id_ac_exame, 0) AS id_ac_atendimento,
+            -- COALESCE(aae.id_ac_exame, 0) AS id_ac_atendimento,
             p.grupo AS grupo_produto,
             ri.id_recepcao AS ordem_venda,
             ri.id_paciente,
@@ -86,7 +86,7 @@ class InvoiceController extends Controller
         INNER JOIN datas dt ON dt.data = r.data
         LEFT JOIN atendimentos a ON (a.id_recepcao_item = ri.id_item)
         LEFT JOIN atendimentos_stamps as2 ON (a.id_atendimento = as2.id_atendimento)
-        LEFT JOIN ac_atendimentos_exames aae ON (aae.id_recepcao_item  = ri.id_item)
+        -- LEFT JOIN ac_atendimentos_exames aae ON (aae.id_recepcao_item  = ri.id_item)
         LEFT JOIN executantes e ON ( e.id_executante = ri.id_executante)
         LEFT JOIN produtos p ON ( p.id_produto = ri.id_produto)
         LEFT JOIN unidades u ON (u.id_unidade = ri.id_unidade)
@@ -195,6 +195,28 @@ class InvoiceController extends Controller
         ";
 
         return DB::select($sql, [$id_recepcao]);
+    }
+
+    public function buscarNotasProntasParaProcessar(Request $request)
+    {
+        $id_recepcao = $request->id_recepcao;
+        
+        $sql = "
+            SELECT *
+            FROM emissao_notas_fiscais
+            WHERE sigla <> 'TABO'
+            AND status = 'NAO_EMITIDO'
+            AND account_number IS NOT NULL
+            AND id_recepcao = ?
+        ";
+
+        $notas = DB::select($sql, [$id_recepcao]);
+        
+        return response()->json([
+            'notas' => $notas,
+            'total' => count($notas),
+            'status' => count($notas) > 0 ? 'ready' : 'none'
+        ]);
     }
 
 

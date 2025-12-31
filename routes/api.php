@@ -19,6 +19,9 @@ Route::post('/overbooking/reprocessar_escala', [OverbookingController::class, 'r
 // Rota API para buscar notas fiscais por recepção
 Route::get('/invoice/buscar', [InvoiceController::class, 'buscarNotasPorRecepcao']);
 
+// Rota API para buscar notas prontas para processar
+Route::get('/invoice/notas-prontas', [InvoiceController::class, 'buscarNotasProntasParaProcessar']);
+
 // Rota API para processar notas fiscais por recepção
 Route::post('/invoice/processar', [InvoiceController::class, 'processarNotas']);
 
