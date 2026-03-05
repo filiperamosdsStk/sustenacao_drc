@@ -43,6 +43,12 @@ class AssinaturaController extends Controller
             $sql .= " AND a.id_profissional $request->mevo_filter ($placeholders)";
             $params = array_merge($params, array_values($mevoList));
         }
+
+        if ($request->filled('id_profissional')) {
+            $sql .= " AND a.id_profissional = ?";
+            $params[] = $request->id_profissional;
+        }
+
         $atendimentos = DB::select($sql, $params);
         return $atendimentos;
 

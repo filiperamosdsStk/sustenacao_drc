@@ -10,19 +10,21 @@ export default function AssinaturaIndex() {
     // Data selecionada para filtro padrao now 
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [mevoFilter, setMevoFilter] = useState('todos'); // 'mevo', 'nao_mevo', 'todos'
+    const [idProfissional, setIdProfissional] = useState('');
 
     useEffect(() => {
         // Busca inicial sem data específica
         fetchAtendimentos();
     }, []);
 
-    async function fetchAtendimentos(data?: string, filtroMevo?: string) {
+    async function fetchAtendimentos(data?: string, filtroMevo?: string, profissionalId?: string) {
         setLoading(true);
         // Converter data de YYYY-MM-DD para YYYYMMDD
         const dataToSend = data || selectedDate;
         const dataFormatada = dataToSend ? dataToSend.replace(/-/g, '') : undefined;
         
         const filterValue = filtroMevo || mevoFilter;
+        const profissionalIdValue = profissionalId ?? idProfissional;
         const requestData: any = {
             data: dataFormatada
         };
@@ -30,6 +32,10 @@ export default function AssinaturaIndex() {
         // Só enviar mevo_filter se não for "todos"
         if (filterValue !== 'todos') {
             requestData.mevo_filter = filterValue;
+        }
+
+        if (profissionalIdValue.trim() !== '') {
+            requestData.id_profissional = profissionalIdValue.trim();
         }
         
         const { data: response } = await axios.post('/api/assinatura/atendimentos', requestData);
@@ -119,8 +125,21 @@ export default function AssinaturaIndex() {
                                 <option value="NOT IN">Médicos fora da MEVO</option>
                             </select>
                         </div>
+                        <div>
+                            <label htmlFor="id-profissional" className="block text-sm font-medium text-gray-700 mb-2">
+                                Id Profissional
+                            </label>
+                            <input
+                                type="text"
+                                id="id-profissional"
+                                value={idProfissional}
+                                onChange={(e) => setIdProfissional(e.target.value)}
+                                placeholder="Ex.: 12345"
+                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
                         <button
-                            onClick={() => fetchAtendimentos(selectedDate, mevoFilter)}
+                            onClick={() => fetchAtendimentos(selectedDate, mevoFilter, idProfissional)}
                             disabled={loading}
                             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400"
                         >
