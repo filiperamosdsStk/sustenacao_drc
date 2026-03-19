@@ -13,6 +13,7 @@ class InvoiceController extends Controller
 {
 
     public $phpEndpoint = 'https://atendimento-externo-92095499668.us-east1.run.app/atendimento_externo';
+    public $phpEnviaNota = 'https://enviar-nota-fiscal-oracle-92095499668.us-east1.run.app/enviar_nota_fiscal';
     public $token = 'iGgYzfRHMeXM8yoJukY5iT0Z5aw';
 
     public function processarNotas(Request $request)
@@ -154,7 +155,7 @@ class InvoiceController extends Controller
 
                         $response = Http::withHeaders([
                             'Authorization' => 'Bearer iGgYzfRHMeXM8yoJukY5iT0Z5aw'
-                        ])->post($this->phpEndpoint, $bloco);
+                        ])->post($this->phpEnviaNota, $bloco);
 
                         Log::info("Bloco " . ($index + 1) . " processado para id_recepcao $idRecepcao");
 
