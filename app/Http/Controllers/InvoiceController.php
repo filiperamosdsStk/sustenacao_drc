@@ -321,6 +321,7 @@ class InvoiceController extends Controller
                 r.id_recepcao,
                 ri.id_item AS id_recepcao_item,
                 ri.id_produto,
+                ri.id_prevenda,
                 p.produto AS nome_produto,
                 p.grupo AS grupo_produto,
                 p.id_item_erp,
@@ -331,7 +332,8 @@ class InvoiceController extends Controller
                 ri.id_executante,
                 ex.tipo AS tipo_executante,
                 ri.oracle_sequencial,
-                ri.id_invoice_oracle
+                ri.id_invoice_oracle,
+                r.data AS data_recepcao
             FROM recepcao r
             INNER JOIN recepcao_itens ri
                 ON ri.id_recepcao = r.id_recepcao
