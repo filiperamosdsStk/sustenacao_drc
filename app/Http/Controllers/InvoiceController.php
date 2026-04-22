@@ -389,6 +389,97 @@ class InvoiceController extends Controller
 
         $aptaEmissao = empty($motivosBloqueio);
 
+        $itensDiagnosticoRows = DB::select(
+            "SELECT
+                ri.id_item AS id_recepcao_item,
+                ri.id_produto,
+                p.produto AS nome_produto,
+                p.grupo AS grupo_produto,
+                ri.id_convenio,
+                ri.valor,
+                ri.valor_desconto,
+                ri.ativo_sn,
+                ri.cancelado_sn,
+                ri.recoleta_sn,
+                ri.id_item_credito,
+                ri.oracle_sequencial,
+                ri.id_invoice_oracle,
+                p.realiza_em_sala_sn,
+                ex.tipo AS tipo_executante,
+                ats.st_consulta_fim,
+                aae.status AS status_ac,
+                CONCAT_WS('; ',
+                    IF(ri.ativo_sn != 'S', 'item inativo', NULL),
+                    IF(ri.cancelado_sn = 'S', 'item cancelado', NULL),
+                    IF(ri.recoleta_sn = 'S', 'item marcado como recoleta', NULL),
+                    IF((ri.valor - ri.valor_desconto) <= 0, 'valor líquido <= 0', NULL),
+                    IF(ri.id_produto IN (9462, 9463, 9464, 9465, 9466, 9467, 9610, 9611), 'produto não gera NF', NULL),
+                    IF(ri.oracle_sequencial IS NOT NULL, 'item já possui RPS (oracle_sequencial)', NULL),
+                    IF(ri.id_invoice_oracle IS NOT NULL AND ri.id_invoice_oracle != '', 'item já possui NF no Oracle', NULL),
+                    IF(
+                        NOT (
+                            ats.st_consulta_fim IS NOT NULL
+                            OR aae.status != 'P'
+                            OR ex.tipo IN ('E')
+                            OR p.realiza_em_sala_sn = 'S'
+                        ),
+                        'item não atende regra de elegibilidade (consulta/exame/externo/sala)',
+                        NULL
+                    )
+                ) AS motivo_nao_elegivel
+            FROM recepcao_itens ri
+            INNER JOIN recepcao r ON r.id_recepcao = ri.id_recepcao
+            INNER JOIN produtos p ON p.id_produto = ri.id_produto
+            LEFT JOIN atendimentos at ON at.id_recepcao_item = ri.id_item
+            LEFT JOIN atendimentos_stamps ats ON ats.id_atendimento = at.id_atendimento
+            LEFT JOIN ac_atendimentos_exames aae ON aae.id_recepcao_item = ri.id_item
+            LEFT JOIN executantes ex ON ex.id_executante = ri.id_executante
+            WHERE ri.id_recepcao = ?
+            ORDER BY ri.id_item",
+            [$idRecepcao]
+        );
+
+        $itensNaoElegiveis = array_values(array_filter(array_map(function ($row) {
+            $item = (array) $row;
+            $motivos = array_values(array_filter(array_map('trim', explode(';', (string) ($item['motivo_nao_elegivel'] ?? '')))));
+            if (empty($motivos)) {
+                return null;
+            }
+
+            return [
+                'id_recepcao_item' => (int) $item['id_recepcao_item'],
+                'id_produto' => (int) $item['id_produto'],
+                'nome_produto' => $item['nome_produto'],
+                'grupo_produto' => $item['grupo_produto'],
+                'motivos' => $motivos,
+            ];
+        }, $itensDiagnosticoRows)));
+
+        $sqlDiagnostico = "SELECT
+    ri.id_item AS id_recepcao_item,
+    ri.id_produto,
+    p.produto AS nome_produto,
+    ri.ativo_sn,
+    ri.cancelado_sn,
+    ri.recoleta_sn,
+    ri.valor,
+    ri.valor_desconto,
+    ri.oracle_sequencial,
+    ri.id_invoice_oracle,
+    p.realiza_em_sala_sn,
+    ex.tipo AS tipo_executante,
+    ats.st_consulta_fim,
+    aae.status AS status_ac
+FROM recepcao_itens ri
+INNER JOIN recepcao r ON r.id_recepcao = ri.id_recepcao
+INNER JOIN produtos p ON p.id_produto = ri.id_produto
+LEFT JOIN atendimentos at ON at.id_recepcao_item = ri.id_item
+LEFT JOIN atendimentos_stamps ats ON ats.id_atendimento = at.id_atendimento
+LEFT JOIN ac_atendimentos_exames aae ON aae.id_recepcao_item = ri.id_item
+LEFT JOIN executantes ex ON ex.id_executante = ri.id_executante
+WHERE ri.id_recepcao = {$idRecepcao}
+ORDER BY ri.id_item;";
+
         return response()->json([
             'id_recepcao' => (int) $idRecepcao,
             'apta_emissao' => $aptaEmissao,
@@ -405,6 +496,8 @@ class InvoiceController extends Controller
             ],
             'dados_recepcao' => $recepcao,
             'itens_para_emissao' => $itensElegiveis,
+            'itens_nao_elegiveis' => $itensNaoElegiveis,
+            'sql_diagnostico' => $sqlDiagnostico,
         ]);
     }
 

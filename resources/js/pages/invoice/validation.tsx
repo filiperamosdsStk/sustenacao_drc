@@ -41,6 +41,14 @@ type ValidationResponse = {
         oracle_sequencial: string | null;
         id_invoice_oracle: string | null;
     }>;
+    itens_nao_elegiveis: Array<{
+        id_recepcao_item: number;
+        id_produto: number;
+        nome_produto: string;
+        grupo_produto: string;
+        motivos: string[];
+    }>;
+    sql_diagnostico: string;
 };
 
 export default function InvoiceValidationPage() {
@@ -233,6 +241,40 @@ export default function InvoiceValidationPage() {
                                         </table>
                                     </div>
                                 )}
+                            </section>
+
+                            <section className="rounded-lg bg-white p-6 shadow">
+                                <h2 className="mb-3 text-xl font-semibold text-gray-900">
+                                    Itens não elegíveis ({result.itens_nao_elegiveis.length})
+                                </h2>
+                                {result.itens_nao_elegiveis.length === 0 ? (
+                                    <p className="text-sm text-gray-600">Nenhum item bloqueado encontrado.</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {result.itens_nao_elegiveis.map((item) => (
+                                            <div key={item.id_recepcao_item} className="rounded border border-red-200 bg-red-50 p-3">
+                                                <p className="text-sm font-semibold text-red-800">
+                                                    Item {item.id_recepcao_item} - {item.nome_produto} (produto {item.id_produto})
+                                                </p>
+                                                <ul className="mt-1 list-disc pl-6 text-sm text-red-700">
+                                                    {item.motivos.map((motivo) => (
+                                                        <li key={motivo}>{motivo}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+
+                            <section className="rounded-lg bg-white p-6 shadow">
+                                <h2 className="mb-3 text-xl font-semibold text-gray-900">SQL para diagnóstico</h2>
+                                <p className="mb-3 text-sm text-gray-600">
+                                    Execute este SQL direto no banco para validar o motivo do bloqueio.
+                                </p>
+                                <pre className="overflow-x-auto rounded bg-gray-900 p-4 text-xs text-gray-100">
+                                    <code>{result.sql_diagnostico}</code>
+                                </pre>
                             </section>
                         </div>
                     )}
