@@ -392,6 +392,7 @@ class InvoiceController extends Controller
         $itensDiagnosticoRows = DB::select(
             "SELECT
                 ri.id_item AS id_recepcao_item,
+                ri.id_recepcao,
                 ri.id_produto,
                 p.produto AS nome_produto,
                 p.grupo AS grupo_produto,
@@ -404,11 +405,20 @@ class InvoiceController extends Controller
                 ri.id_item_credito,
                 ri.oracle_sequencial,
                 ri.id_invoice_oracle,
+                r.ativo_sn AS recepcao_ativa_sn,
+                r.cancelado_sn AS recepcao_cancelado_sn,
+                r.cobrado_sn AS recepcao_cobrado_sn,
+                r.stamp_fim AS recepcao_stamp_fim,
                 p.realiza_em_sala_sn,
                 ex.tipo AS tipo_executante,
                 ats.st_consulta_fim,
                 aae.status AS status_ac,
+                oru.codigo_servico_municipio AS cod_servico,
                 CONCAT_WS('; ',
+                    IF(r.ativo_sn != 'S', 'recepção inativa', NULL),
+                    IF(r.cancelado_sn = 'S', 'recepção cancelada', NULL),
+                    IF(r.cobrado_sn != 'S', 'recepção não cobrada/paga', NULL),
+                    IF(r.stamp_fim IS NULL, 'recepção sem encerramento (stamp_fim)', NULL),
                     IF(ri.ativo_sn != 'S', 'item inativo', NULL),
                     IF(ri.cancelado_sn = 'S', 'item cancelado', NULL),
                     IF(ri.recoleta_sn = 'S', 'item marcado como recoleta', NULL),
@@ -416,6 +426,7 @@ class InvoiceController extends Controller
                     IF(ri.id_produto IN (9462, 9463, 9464, 9465, 9466, 9467, 9610, 9611), 'produto não gera NF', NULL),
                     IF(ri.oracle_sequencial IS NOT NULL, 'item já possui RPS (oracle_sequencial)', NULL),
                     IF(ri.id_invoice_oracle IS NOT NULL AND ri.id_invoice_oracle != '', 'item já possui NF no Oracle', NULL),
+                    IF(oru.codigo_servico_municipio IS NULL OR oru.codigo_servico_municipio = '', 'sem cadastro em oracle_unidades_servicos (grupo/unidade)', NULL),
                     IF(
                         NOT (
                             ats.st_consulta_fim IS NOT NULL
@@ -430,10 +441,14 @@ class InvoiceController extends Controller
             FROM recepcao_itens ri
             INNER JOIN recepcao r ON r.id_recepcao = ri.id_recepcao
             INNER JOIN produtos p ON p.id_produto = ri.id_produto
+            INNER JOIN unidades u ON u.id_unidade = r.id_clinica
             LEFT JOIN atendimentos at ON at.id_recepcao_item = ri.id_item
             LEFT JOIN atendimentos_stamps ats ON ats.id_atendimento = at.id_atendimento
             LEFT JOIN ac_atendimentos_exames aae ON aae.id_recepcao_item = ri.id_item
             LEFT JOIN executantes ex ON ex.id_executante = ri.id_executante
+            LEFT JOIN oracle_unidades_servicos oru
+                ON (oru.id_unidade = r.id_clinica OR oru.id_unidade_oracle = u.id_unidade_oracle)
+               AND p.grupo = oru.grupo
             WHERE ri.id_recepcao = ?
             ORDER BY ri.id_item",
             [$idRecepcao]
@@ -457,8 +472,13 @@ class InvoiceController extends Controller
 
         $sqlDiagnostico = "SELECT
     ri.id_item AS id_recepcao_item,
+    ri.id_recepcao,
     ri.id_produto,
     p.produto AS nome_produto,
+    r.ativo_sn AS recepcao_ativa_sn,
+    r.cancelado_sn AS recepcao_cancelado_sn,
+    r.cobrado_sn AS recepcao_cobrado_sn,
+    r.stamp_fim AS recepcao_stamp_fim,
     ri.ativo_sn,
     ri.cancelado_sn,
     ri.recoleta_sn,
@@ -469,14 +489,40 @@ class InvoiceController extends Controller
     p.realiza_em_sala_sn,
     ex.tipo AS tipo_executante,
     ats.st_consulta_fim,
-    aae.status AS status_ac
+    aae.status AS status_ac,
+    oru.codigo_servico_municipio AS cod_servico,
+    CASE
+        WHEN r.ativo_sn <> 'S' THEN 'BLOQ: recepção inativa'
+        WHEN r.cancelado_sn = 'S' THEN 'BLOQ: recepção cancelada'
+        WHEN r.cobrado_sn <> 'S' THEN 'BLOQ: recepção não cobrada/paga'
+        WHEN r.stamp_fim IS NULL THEN 'BLOQ: recepção sem encerramento'
+        WHEN ri.ativo_sn <> 'S' THEN 'BLOQ: item inativo'
+        WHEN ri.cancelado_sn = 'S' THEN 'BLOQ: item cancelado'
+        WHEN ri.recoleta_sn = 'S' THEN 'BLOQ: item marcado como recoleta'
+        WHEN (ri.valor - ri.valor_desconto) <= 0 THEN 'BLOQ: valor líquido <= 0'
+        WHEN ri.id_produto IN (9462, 9463, 9464, 9465, 9466, 9467, 9610, 9611) THEN 'BLOQ: produto não gera NF'
+        WHEN ri.oracle_sequencial IS NOT NULL THEN 'BLOQ: item já possui RPS (oracle_sequencial)'
+        WHEN ri.id_invoice_oracle IS NOT NULL AND ri.id_invoice_oracle <> '' THEN 'BLOQ: item já possui NF no Oracle'
+        WHEN oru.codigo_servico_municipio IS NULL OR oru.codigo_servico_municipio = '' THEN 'BLOQ: sem cadastro em oracle_unidades_servicos'
+        WHEN NOT (
+            ats.st_consulta_fim IS NOT NULL
+            OR aae.status <> 'P'
+            OR ex.tipo = 'E'
+            OR p.realiza_em_sala_sn = 'S'
+        ) THEN 'BLOQ: não atende regra consulta/exame/externo/sala'
+        ELSE 'ELEGIVEL'
+    END AS diagnostico
 FROM recepcao_itens ri
 INNER JOIN recepcao r ON r.id_recepcao = ri.id_recepcao
 INNER JOIN produtos p ON p.id_produto = ri.id_produto
+INNER JOIN unidades u ON u.id_unidade = r.id_clinica
 LEFT JOIN atendimentos at ON at.id_recepcao_item = ri.id_item
 LEFT JOIN atendimentos_stamps ats ON ats.id_atendimento = at.id_atendimento
 LEFT JOIN ac_atendimentos_exames aae ON aae.id_recepcao_item = ri.id_item
 LEFT JOIN executantes ex ON ex.id_executante = ri.id_executante
+LEFT JOIN oracle_unidades_servicos oru
+    ON (oru.id_unidade = r.id_clinica OR oru.id_unidade_oracle = u.id_unidade_oracle)
+   AND p.grupo = oru.grupo
 WHERE ri.id_recepcao = {$idRecepcao}
 ORDER BY ri.id_item;";
 
