@@ -21,3 +21,7 @@ Route::get('/overbooking', function () {
 Route::get('/assinatura', function () {
     return Inertia::render('assinatura/index');
 })->name('assinatura.index');
+
+Route::get('/invoice/validacao', function () {
+    return Inertia::render('invoice/validation');
+})->name('invoice.validation');

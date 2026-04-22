@@ -129,7 +129,7 @@ export default function ReceptionSearch() {
                     )}
                 </main>
                 {results.length > 0 && (
-                    <div className="mt-8 flex justify-center">
+                    <div className="mt-8 flex justify-center gap-4">
                         <button
                             type="button"
                             className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 shadow"
@@ -137,6 +137,12 @@ export default function ReceptionSearch() {
                         >
                             Abrir Emissão de Nota Fiscal
                         </button>
+                        <Link
+                            href={`/invoice/validacao?id_recepcao=${encodeURIComponent(idRecepcao)}`}
+                            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 shadow"
+                        >
+                            Validar Aptidão para Emissão
+                        </Link>
                     </div>
                 )}
                 {showInvoice && (
