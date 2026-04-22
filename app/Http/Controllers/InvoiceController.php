@@ -356,7 +356,7 @@ class InvoiceController extends Controller
               AND r.stamp_fim IS NOT NULL
               AND (
                     ats.st_consulta_fim IS NOT NULL
-                    OR aae.status != 'P'
+                    OR COALESCE(aae.status, 'P') != 'P'
                     OR ex.tipo IN ('E')
                     OR p.realiza_em_sala_sn = 'S'
               )
@@ -430,7 +430,7 @@ class InvoiceController extends Controller
                     IF(
                         NOT (
                             ats.st_consulta_fim IS NOT NULL
-                            OR aae.status != 'P'
+                            OR COALESCE(aae.status, 'P') != 'P'
                             OR ex.tipo IN ('E')
                             OR p.realiza_em_sala_sn = 'S'
                         ),
@@ -506,7 +506,7 @@ class InvoiceController extends Controller
         WHEN oru.codigo_servico_municipio IS NULL OR oru.codigo_servico_municipio = '' THEN 'BLOQ: sem cadastro em oracle_unidades_servicos'
         WHEN NOT (
             ats.st_consulta_fim IS NOT NULL
-            OR aae.status <> 'P'
+            OR COALESCE(aae.status, 'P') <> 'P'
             OR ex.tipo = 'E'
             OR p.realiza_em_sala_sn = 'S'
         ) THEN 'BLOQ: não atende regra consulta/exame/externo/sala'
