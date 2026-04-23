@@ -424,7 +424,11 @@ class InvoiceController extends Controller
                     IF(ri.recoleta_sn = 'S', 'item marcado como recoleta', NULL),
                     IF((ri.valor - ri.valor_desconto) <= 0, 'valor líquido <= 0', NULL),
                     IF(ri.id_produto IN (9462, 9463, 9464, 9465, 9466, 9467, 9610, 9611), 'produto não gera NF', NULL),
-                    IF(ri.oracle_sequencial IS NOT NULL, 'item já possui RPS (oracle_sequencial)', NULL),
+                    IF(
+                        ri.oracle_sequencial IS NOT NULL,
+                        CONCAT('item já possui RPS (oracle_sequencial: ', ri.oracle_sequencial, ')'),
+                        NULL
+                    ),
                     IF(ri.id_invoice_oracle IS NOT NULL AND ri.id_invoice_oracle != '', 'item já possui NF no Oracle', NULL),
                     IF(oru.codigo_servico_municipio IS NULL OR oru.codigo_servico_municipio = '', 'sem cadastro em oracle_unidades_servicos (grupo/unidade)', NULL),
                     IF(
@@ -501,7 +505,7 @@ class InvoiceController extends Controller
         WHEN ri.recoleta_sn = 'S' THEN 'BLOQ: item marcado como recoleta'
         WHEN (ri.valor - ri.valor_desconto) <= 0 THEN 'BLOQ: valor líquido <= 0'
         WHEN ri.id_produto IN (9462, 9463, 9464, 9465, 9466, 9467, 9610, 9611) THEN 'BLOQ: produto não gera NF'
-        WHEN ri.oracle_sequencial IS NOT NULL THEN 'BLOQ: item já possui RPS (oracle_sequencial)'
+        WHEN ri.oracle_sequencial IS NOT NULL THEN CONCAT('BLOQ: item já possui RPS (oracle_sequencial: ', ri.oracle_sequencial, ')')
         WHEN ri.id_invoice_oracle IS NOT NULL AND ri.id_invoice_oracle <> '' THEN 'BLOQ: item já possui NF no Oracle'
         WHEN oru.codigo_servico_municipio IS NULL OR oru.codigo_servico_municipio = '' THEN 'BLOQ: sem cadastro em oracle_unidades_servicos'
         WHEN NOT (
