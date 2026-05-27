@@ -28,6 +28,9 @@ Route::post('/invoice/processar', [InvoiceController::class, 'processarNotas']);
 // Rota API para enviar notas fiscais por recepção (se necessário)
 Route::post('/invoice/enviar', [InvoiceController::class, 'processarNotasPorRecepcao']);
 
+// Rota API para validar se recepção pode emitir NF
+Route::get('/invoice/validar-recepcao', [InvoiceController::class, 'validarRecepcaoParaEmissao']);
+
 // Rota API para pegar atendimentos para assinatura
 Route::post('/assinatura/atendimentos', [AssinaturaController::class, 'getAtendimentos']);
 
